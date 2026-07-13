@@ -1,0 +1,8 @@
+node_modules/
+cypress/downloads/
+cypress/videos/
+cypress/screenshots/
+.DS_Store
+.pytest_cache/
+__pycache__/
+*.pyc

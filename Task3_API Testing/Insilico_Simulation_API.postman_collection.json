@@ -1,0 +1,189 @@
+{
+  "info": {
+    "name": "Insilico Simulation API",
+    "description": "API tests for POST /simulate/. Set the collection variable baseUrl (default http://localhost:8000). Requests are grouped into Positive, Negative and Edge folders.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" }
+  ],
+  "item": [
+    {
+      "name": "Positive",
+      "item": [
+        {
+          "name": "Valid simulation (a=1,b=1,i1=1,i2=2)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/simulate/", "host": ["{{baseUrl}}"], "path": ["simulate", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"input_data\": { \"i1\": 1.0, \"i2\": 2.0 },\n  \"model_params\": { \"a\": 1.0, \"b\": 1.0 }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('has inputs and outputs', () => {",
+                  "  pm.expect(j).to.have.property('inputs');",
+                  "  pm.expect(j).to.have.property('outputs');",
+                  "});",
+                  "pm.test('inputs are echoed', () => pm.expect(j.inputs).to.eql({ i1: 1.0, i2: 2.0 }));",
+                  "pm.test('o1 = 3.0', () => pm.expect(j.outputs.o1).to.be.closeTo(3.0, 1e-6));",
+                  "pm.test('o2 ~ 0.4253', () => pm.expect(j.outputs.o2).to.be.closeTo(0.4253, 1e-3));",
+                  "pm.test('o3 ~ 0.3679', () => pm.expect(j.outputs.o3).to.be.closeTo(0.3679, 1e-3));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Valid simulation (a=2,b=3,i1=1,i2=1)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/simulate/", "host": ["{{baseUrl}}"], "path": ["simulate", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"input_data\": { \"i1\": 1.0, \"i2\": 1.0 },\n  \"model_params\": { \"a\": 2.0, \"b\": 3.0 }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json().outputs;",
+                  "pm.test('o1 = 5.0', () => pm.expect(o.o1).to.be.closeTo(5.0, 1e-6));",
+                  "pm.test('o2 ~ -0.0807', () => pm.expect(o.o2).to.be.closeTo(-0.0807, 1e-3));",
+                  "pm.test('o3 ~ 0.8285', () => pm.expect(o.o3).to.be.closeTo(0.8285, 1e-3));",
+                  "pm.test('all outputs finite', () => Object.values(o).forEach(v => pm.expect(Number.isFinite(v)).to.be.true));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Negative",
+      "item": [
+        {
+          "name": "Missing field i1 -> 422",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/simulate/", "host": ["{{baseUrl}}"], "path": ["simulate", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"input_data\": { \"i2\": 2.0 },\n  \"model_params\": { \"a\": 1.0, \"b\": 1.0 }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('missing field is rejected with 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Flat body (not nested) -> 422",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/simulate/", "host": ["{{baseUrl}}"], "path": ["simulate", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"i1\": 1.0, \"i2\": 2.0, \"a\": 1.0, \"b\": 1.0\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Documents the non-obvious contract: a flat body is rejected;",
+                  "// the API requires the two nested objects input_data and model_params.",
+                  "pm.test('flat body is rejected with 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET not allowed -> 405",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/simulate/", "host": ["{{baseUrl}}"], "path": ["simulate", ""] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('GET is not allowed (405)', () => pm.response.to.have.status(405));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Edge",
+      "item": [
+        {
+          "name": "Extreme input (overflow) -> flag non-finite",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/simulate/", "host": ["{{baseUrl}}"], "path": ["simulate", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"input_data\": { \"i1\": -1000.0, \"i2\": 1.0 },\n  \"model_params\": { \"a\": 1.0, \"b\": 1.0 }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// a*i1 = -1000 -> exp(1000) overflows. This checks whether a non-finite",
+                  "// value leaks into the response. A guarded API would validate the range",
+                  "// or return a clear error instead.",
+                  "if (pm.response.code === 200) {",
+                  "  const o3 = pm.response.json().outputs.o3;",
+                  "  pm.test('o3 should be finite (fails if the API lets overflow through)', () => {",
+                  "    pm.expect(Number.isFinite(o3)).to.be.true;",
+                  "  });",
+                  "} else {",
+                  "  pm.test('extreme input returns a handled error', () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422, 500]);",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

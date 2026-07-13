@@ -1,0 +1,12 @@
+{
+  "name": "escher-cypress-tests",
+  "version": "1.0.0",
+  "description": "Cypress automation for the Escher map viewer (QA assessment Task 4)",
+  "scripts": {
+    "cy:open": "cypress open",
+    "cy:run": "cypress run"
+  },
+  "devDependencies": {
+    "cypress": "^13.6.0"
+  }
+}

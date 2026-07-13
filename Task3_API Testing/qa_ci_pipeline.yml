@@ -1,0 +1,40 @@
+name: API tests
+
+on: [push, pull_request]
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install fastapi uvicorn numpy pydantic pytest requests
+          npm install -g newman
+
+      - name: Start the API
+        run: |
+          uvicorn qa_simulation_api:app --host 0.0.0.0 --port 8000 &
+          # wait until the API is accepting connections
+          for i in $(seq 1 20); do
+            if curl -s http://localhost:8000/docs > /dev/null; then break; fi
+            sleep 1
+          done
+
+      - name: Run pytest suite
+        env:
+          BASE_URL: http://localhost:8000
+        run: pytest test_simulation_api.py -v
+
+      - name: Run Postman collection with Newman
+        run: |
+          newman run Insilico_Simulation_API.postman_collection.json \
+            --env-var baseUrl=http://localhost:8000
